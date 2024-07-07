@@ -137,9 +137,9 @@ export class AdminController {
 
             if (files.photo) {
                 const newFilename = await this.fileService.generateFileName(`${files.photo[0].filename}-${uniqueSuffix}-photo`, files.photo[0], "uploads/admin");
-                admin.photo = `${this.configService.get<string>('BASE_URL')}/uploads/admin/${newFilename}`;
+                admin.photo = `uploads/admin/${newFilename}`;
             } else {
-                admin.avatar = `${this.configService.get<string>('BASE_URL')}/uploads/avatar/avatar.jpg}`;
+                admin.avatar = `uploads/avatar/avatar.jpg}`;
             }
 
             await admin.save();
@@ -221,7 +221,7 @@ export class AdminController {
             }
 
             const newFilename = await this.fileService.generateFileName(`${files.photo[0].filename}-${uniqueSuffix}-photo`, files.photo[0], "uploads/admin");
-            admin.photo = `${this.configService.get<string>('BASE_URL')}/uploads/admin/${newFilename}`;
+            admin.photo = `uploads/admin/${newFilename}`;
         } else {
             admin.photo = admin.photo;
         }
