@@ -1,14 +1,17 @@
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { Injectable, Body } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 
-import { Category } from './schema/category.schema';
+import { Category, CategorySchema } from './schema/category.schema';
 import { CreateCategoryDto } from './dto/create-category.dto';
+
+import { BlogService } from 'src/blog/blog.service';
 
 @Injectable()
 export class CategoryService {
     constructor(
         @InjectModel(Category.name) private categoryModel: Model<Category>,
+        private readonly blogService: BlogService
     ) { }
 
     async create(categoryDto: CreateCategoryDto): Promise<Category> {
@@ -39,8 +42,25 @@ export class CategoryService {
         return result;
     }
 
-    async findOne(id: string): Promise<Category> {
+    async findOne(id: any): Promise<Category> {
         return await this.categoryModel.findById(id).exec();
+    }
+
+    /** Find category that parent_category_id must be null */
+    async findAllSubCategory() {
+        return await this.categoryModel.find({
+            parent_category_id: { $ne: null }
+        }).exec();
+    }
+
+    /** Find sub-category by Id */
+    async findSubCategoryById(id: string) {
+        return await this.categoryModel.findOne({
+            $and: [
+                { parent_category_id: { $ne: null } },
+                { _id: id }
+            ]
+        }).exec();
     }
 
     async update(id: string, categoryDto: Partial<CreateCategoryDto>): Promise<Category> {
@@ -57,6 +77,10 @@ export class CategoryService {
             ...body
         });
         return await newSubcategory.save();
+    }
+
+    async findSubCategories(parentCategoryId: string): Promise<Category[]> {
+        return this.categoryModel.find({ parent_category_id: parentCategoryId }).exec();
     }
 
     async remove(id: string): Promise<Category> {

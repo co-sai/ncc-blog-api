@@ -23,6 +23,12 @@ export class Blog extends Document {
     @Prop({ required: true })
     message_link: string;
 
+    @Prop({ default: 0 })
+    view: number;
+
+    @Prop({ required: true, default : 1 })
+    rank: number;
+
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Category' })
     category_id: mongoose.Types.ObjectId;
 
