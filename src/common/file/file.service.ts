@@ -53,4 +53,13 @@ export class FileService {
         const segments = pathname.split('/');
         return segments.pop();
     }
+
+    async deleteFilesIfExist(mediasFileName, newMediasFileName) {
+        if (mediasFileName.length > 0) {
+            await this.deleteFiles(mediasFileName);
+        }
+        if (newMediasFileName.length > 0) {
+            await this.deleteFiles(newMediasFileName);
+        }
+    }
 }
