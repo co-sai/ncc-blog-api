@@ -22,6 +22,19 @@ export class BlogService {
         return this.blogModel.find({ category_id: categoryId }).exec();
     }
 
+    /** Find Blog for category detail  using pagination */
+    async findBlogsByCategoryId(id: string, page: number, limit: number
+    ) {
+        const blogs = await this.blogModel.find({ category_id: id })
+            .limit(limit)
+            .skip((page - 1) * limit)
+            .sort({ createdAt: -1 })
+            .exec();
+        const total_count = await this.blogModel.find({ category_id: id }).countDocuments();
+
+        return { blogs, total_count };
+    }
+
     async deleteByCategoryId(categoryId: string): Promise<void> {
         await this.blogModel.deleteMany({ category_id: categoryId }).exec();
     }
@@ -40,7 +53,7 @@ export class BlogService {
         return blog;
     }
 
-    async findByIdAndDelete(id : string){
+    async findByIdAndDelete(id: string) {
         await this.blogModel.findByIdAndDelete(id);
     }
 }

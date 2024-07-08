@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, InternalServerErrorException, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, InternalServerErrorException, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 
 import { CategoryService } from './category.service';
 import { FileService } from 'src/common/file/file.service';
@@ -64,10 +64,24 @@ export class CategoryController {
     /** Need to implement - Category Detail - find category / related sub-category and related blogs. */
     @HttpCode(200)
     @Get(':id')
-    async findOne(@Param('id') id: string) {
-        const result = await this.categoryService.findOne(id);
+    async findOne(
+        @Param('id') id: string,
+        @Query() query : { page : string, limit : string}
+    ) {
+        const page = +query.page || 1;
+        const limit = +query.limit || 20;
+
+        const category = await this.categoryService.findOne(id);
+        const { blogs, total_count } = await this.blogService.findBlogsByCategoryId(id, page, limit);
+
         return {
-            data: result
+            data: {
+                category,
+                blogs,
+                page,
+                limit,
+                total_count
+            }
         }
     }
 
