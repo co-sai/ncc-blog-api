@@ -50,7 +50,13 @@ export class CategoryService {
     async findAllSubCategory() {
         return await this.categoryModel.find({
             parent_category_id: { $ne: null }
-        }).exec();
+        })
+        .populate({
+            path : "parent_category_id",
+            model: "Category",
+            select: "_id name"
+        })
+        .exec();
     }
 
     /** Find sub-category by Id */
