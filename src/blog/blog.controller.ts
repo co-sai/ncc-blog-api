@@ -1,5 +1,5 @@
 "use strict";
-import { Controller, Get, Post, Patch, Param, Body, UploadedFiles, Request, UseGuards, UseInterceptors, InternalServerErrorException, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UploadedFiles, Request, UseGuards, UseInterceptors, InternalServerErrorException, Delete, Query } from '@nestjs/common';
 import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
 import { BlogService } from './blog.service';
@@ -12,6 +12,7 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Public } from '../decorators/public.decorators';
 import { RequestInterface } from 'src/interface/request.interface';
 import { UpdateBlogDto } from './dto/update-blog.dto';
+import { FeedbackService } from 'src/feedback/feedback.service';
 
 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
 
@@ -23,7 +24,8 @@ export class BlogController {
         private readonly fileService: FileService,
         private readonly configService: ConfigService,
         private readonly categoryService: CategoryService,
-        private readonly adminService: AdminService
+        private readonly adminService: AdminService,
+        private readonly feedbackService: FeedbackService
     ) { }
 
     @Post("add")
@@ -84,18 +86,29 @@ export class BlogController {
 
     @Public()
     @Get(":id")
-    async blogDetail(@Param("id") id: string): Promise<any> {
-        const data = await this.blogService.findById(id);
-
-        if (!data) {
+    async blogDetail(
+        @Param("id") id: string,
+        @Query() query: { page : string, limit : string}
+    ): Promise<any> {
+        const page = +query.page || 1;
+        const limit = +query.limit || 20;
+        const blog = await this.blogService.findById(id);
+        const {feedbacks, total_count} = await this.feedbackService.findFeedbacksByBlogId(id, page, limit);
+        if (!blog) {
             throw new InternalServerErrorException("Blog data not found.");
         }
 
-        data.view = +data.view + 1;
-        await data.save();
+        blog.view = +blog.view + 1;
+        await blog.save();
 
         return {
-            data
+            data : {
+                blog,
+                feedbacks,
+                page,
+                limit,
+                total_count
+            }
         };
     }
 
