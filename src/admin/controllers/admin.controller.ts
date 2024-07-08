@@ -38,9 +38,7 @@ export class AdminController {
         const admin = await this.adminService.findById(id);
         const { password, reset_token, reset_token_expiration, ...result } = admin.toJSON();
         return {
-            data: {
-                result
-            }
+            data: admin
         }
     }
 
@@ -57,9 +55,7 @@ export class AdminController {
 
         const admins = await this.adminService.adminList();
         return {
-            data: {
-                admins
-            }
+            data: admins
         }
     }
 
@@ -68,9 +64,7 @@ export class AdminController {
     async findAllRole() {
         const role = await this.adminService.findAllRole();
         return {
-            data: {
-                role
-            }
+            data: role
         }
     }
 
@@ -90,9 +84,7 @@ export class AdminController {
         const admin = await this.adminService.findById(id);
         const { password, reset_token, reset_token_expiration, ...result } = admin.toJSON();
         return {
-            data: {
-                result
-            }
+            data: result
         }
     }
 
