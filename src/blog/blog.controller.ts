@@ -238,6 +238,28 @@ export class BlogController {
         };
     }
 
+    @Patch(":id/set-rank")
+    async setRank(
+        @Param("id") id: string,
+        @Body() body : { rank : number }
+    ): Promise<any> {
+        const { rank } = body;
+
+        const blog = await this.blogService.findById(id);
+
+        if (!blog) {
+            throw new InternalServerErrorException("Blog data not found.");
+        }
+
+        blog.rank = rank
+        await blog.save();
+
+        return {
+            message: "Rank updated successfully",
+            data: blog
+        };
+    }
+
     // Delete Product -> Done - Need to remove old image from product
     @Delete("/:id")
     async deleteProduct(@Param("id") id: string, @Request() req: RequestInterface) {
