@@ -1,14 +1,17 @@
 "use strict";
-import { Controller, Get, Post, Patch, Param, Body, UploadedFiles, Request, UseGuards, UseInterceptors, InternalServerErrorException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UploadedFiles, Request, UseGuards, UseInterceptors, InternalServerErrorException, Delete } from '@nestjs/common';
 import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
 import { BlogService } from './blog.service';
+import { AdminService } from 'src/admin/admin.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { CategoryService } from '../category/category.service';
 import { FileService } from '../common/file/file.service';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Public } from '../decorators/public.decorators';
+import { RequestInterface } from 'src/interface/request.interface';
+import { UpdateBlogDto } from './dto/update-blog.dto';
 
 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
 
@@ -20,6 +23,7 @@ export class BlogController {
         private readonly fileService: FileService,
         private readonly configService: ConfigService,
         private readonly categoryService: CategoryService,
+        private readonly adminService: AdminService
     ) { }
 
     @Post("add")
@@ -95,6 +99,7 @@ export class BlogController {
         };
     }
 
+    /** We don't update main_media */
     @Patch(":id")
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'medias', maxCount: 5 },
@@ -102,7 +107,7 @@ export class BlogController {
     ]))
     async updateBlog(
         @Param("id") id: string,
-        @Body() body: any,
+        @Body() body: Partial<UpdateBlogDto>,
         @UploadedFiles() files: any,
         @Request() req: any,
     ): Promise<any> {
@@ -137,6 +142,8 @@ export class BlogController {
         }
 
         const updatedBlog = await this.blogService.findByIdAndUpdate(id, body);
+
+        /** Start - Used "files.medias" and "mediasIndices" to update image from related images array */
         const mediasIndicesArray = mediasIndices ? JSON.parse(mediasIndices.replace(/^"(.*)"$/, '$1')) : null;
 
         if (files.medias && mediasIndicesArray) {
@@ -156,13 +163,15 @@ export class BlogController {
                 const newImageFile = files.medias[i];
                 const newFilename = await this.fileService.generateFileName(`${newImageFile.filename}-${uniqueSuffix}-related`, newImageFile, 'uploads/blog');
                 await this.fileService.deleteFiles([path.join(process.cwd(), updatedBlog.medias[index])]);
-                
+
                 updatedBlog.medias[index] = `uploads/blog/${newFilename}`;
             }
         } else {
             await this.fileService.deleteFilesIfExist(mediasFileName, []);
         }
+        /** Start - Used "files.medias" and "mediasIndices" to update image from related images array */
 
+        /** Start - Remove medias from medias array */
         const mediaToRemoveArray = medias_to_remove ? JSON.parse(medias_to_remove.replace(/^"(.*)"$/, '$1')) : null;
 
         if (medias_to_remove && mediaToRemoveArray.length > 0) {
@@ -179,7 +188,9 @@ export class BlogController {
                 updatedBlog.medias.splice(index, 1);
             }
         }
+        /** End - Remove medias from medias array */
 
+        /**  Start - Process new medias (if any) */
         if (files.new_medias) {
             let media_files_names = [];
 
@@ -191,18 +202,66 @@ export class BlogController {
             if (media_files_names.length > 0) {
                 updatedBlog.medias.push(...media_files_names.map(file => file));
             }
-
-            if (+body.main_media_index !== undefined && +body.main_media_index < media_files_names.length) {
-                blog.main_media = media_files_names[+body.main_media_index];
-            } else {
-                blog.main_media = media_files_names[0];
-            }
         }
+        /**  End - Process new medias (if any) */
 
         await updatedBlog.save();
 
         return {
             data: updatedBlog
         };
+    }
+
+    @Patch(":id/set-main-media")
+    async setMainMedia(
+        @Param("id") id: string,
+        @Body() body : { main_media_index : number }
+    ): Promise<any> {
+        const { main_media_index } = body;
+
+        const blog = await this.blogService.findById(id);
+
+        if (!blog) {
+            throw new InternalServerErrorException("Blog data not found.");
+        }
+
+        if (main_media_index < 0 || main_media_index >= blog.medias.length) {
+            throw new InternalServerErrorException("Invalid main media index.");
+        }
+
+        blog.main_media = blog.medias[main_media_index];
+        await blog.save();
+
+        return {
+            message: "Main media updated successfully",
+            data: blog
+        };
+    }
+
+    // Delete Product -> Done - Need to remove old image from product
+    @Delete("/:id")
+    async deleteProduct(@Param("id") id: string, @Request() req: RequestInterface) {
+        const _id = req.user._id;
+        const { role_id } = (await this.adminService.findById(_id)).toJSON();
+        if (role_id.name !== "SUPER_ADMIN") {
+            throw new InternalServerErrorException("You don't have the permission.")
+        }
+        const blog = await this.blogService.findById(id);
+        if (!blog) {
+            throw new InternalServerErrorException("Blog not found.");
+        }
+
+        if (blog.medias.length > 0) {
+            const fileName: string[] = blog.medias.map((file) => path.join(process.cwd(), file));
+            await this.fileService.deleteFiles(fileName);
+        }
+
+        // delete product
+        await this.blogService.findByIdAndDelete(id);
+
+        return {
+            message: "Blog has been deleted successfully."
+        }
+
     }
 }

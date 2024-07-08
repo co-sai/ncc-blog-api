@@ -39,4 +39,8 @@ export class BlogService {
         const blog = await this.blogModel.findByIdAndUpdate(id, body, { new: true }).exec();
         return blog;
     }
+
+    async findByIdAndDelete(id : string){
+        await this.blogModel.findByIdAndDelete(id);
+    }
 }

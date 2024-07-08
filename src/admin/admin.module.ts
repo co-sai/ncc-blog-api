@@ -24,6 +24,7 @@ import { AdminController } from './controllers/admin.controller';
     CommonModule
   ],
   controllers: [AdminAuthController, AdminController],
-  providers: [AdminService]
+  providers: [AdminService],
+  exports : [AdminService]
 })
 export class AdminModule { }

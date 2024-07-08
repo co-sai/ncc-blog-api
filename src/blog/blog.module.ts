@@ -9,6 +9,7 @@ import { Blog, BlogSchema } from './schema/blog.schema';
 import { MulterModule } from '@nestjs/platform-express';
 import { blogMulterConfig } from './blog.multer.config';
 import { CategoryModule } from 'src/category/category.module';
+import { AdminModule } from 'src/admin/admin.module';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { CategoryModule } from 'src/category/category.module';
     ]),
     MulterModule.register(blogMulterConfig),
     CommonModule,
-    forwardRef(()=> CategoryModule)
+    forwardRef(()=> CategoryModule),
+    AdminModule
   ],
   controllers: [BlogController],
   providers: [BlogService],
