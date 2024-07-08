@@ -20,6 +20,7 @@ import { FileService } from './common/file/file.service';
 import { CommonModule } from './common/common.module';
 import { CategoryModule } from './category/category.module';
 import { BlogModule } from './blog/blog.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { BlogModule } from './blog/blog.module';
     CommonModule,
     CategoryModule,
     BlogModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [
