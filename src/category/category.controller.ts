@@ -6,7 +6,10 @@ import { BlogService } from 'src/blog/blog.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { Category } from './schema/category.schema';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Public } from 'src/decorators/public.decorators';
 
+@ApiTags("Category API")
 @UseGuards(JwtAuthGuard)
 @Controller({ path: "category", version: "1" })
 export class CategoryController {
@@ -16,8 +19,12 @@ export class CategoryController {
         private readonly blogService: BlogService
     ) { }
 
-    @HttpCode(201)
     @Post("add")
+    @HttpCode(201)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Create category." })
+    @ApiResponse({ status: 201, description: "Category has been created successfully." })
+    @ApiBody({ type: CreateCategoryDto })
     async createParentCategory(@Body() createCategoryDto: CreateCategoryDto) {
         const category = await this.categoryService.create(createCategoryDto);
         return {
@@ -26,8 +33,10 @@ export class CategoryController {
     }
 
     /** Category List */
-    @HttpCode(200)
+    @Public()
     @Get()
+    @HttpCode(200)
+    @ApiOperation({ summary: "Category List including sub-category for learning page."})
     async findAll() {
         const result = await this.categoryService.findAll();
         return {
@@ -35,8 +44,10 @@ export class CategoryController {
         }
     }
 
-    @HttpCode(200)
     @Get("parent")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Parent category list for create sub-category."})
     async findParentCategory() {
         const result = await this.categoryService.findParentCategory();
         return {
@@ -44,8 +55,10 @@ export class CategoryController {
         }
     }
 
-    @HttpCode(200)
     @Get("sub-category")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary:  "Sub-category list for create blog."})
     async findSubCategory() {
         const result = await this.categoryService.findAllSubCategory();
         return {
@@ -54,6 +67,24 @@ export class CategoryController {
     }
 
     @Post('/sub-category')
+    @HttpCode(201)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Create sub-category." })
+    @ApiResponse({ status: 201, description: "Sub-Category has been created successfully." })
+    @ApiBody({
+        description: 'Create sub-category',
+        required: true,
+        examples: {
+            example1: {
+                summary: 'Create sub-category example',
+                value: {
+                    name: 'sub-category from swagger',
+                    description: 'Testing create sub-category in swagger',
+                    parent_category_id: "id"
+                }
+            }
+        }
+    })
     async createSubcategory(@Body() body: CreateCategoryDto) {
         const result = await this.categoryService.createSubcategory(body);
         return {
@@ -61,9 +92,12 @@ export class CategoryController {
         }
     }
 
-    /** Need to implement - Category Detail - find category / related sub-category and related blogs. */
-    @HttpCode(200)
+    /** Done - Need to implement - Category Detail - find category / related sub-category and related blogs. */
+    @Public()
     @Get(':id')
+    @HttpCode(200)
+    @ApiOperation({ summary : "List of Category / Sub-category and related product."})
+    @ApiResponse({ status : 200, description : "List of Category / Sub-category and related products."})
     async findOne(
         @Param('id') id: string,
         @Query() query : { page : string, limit : string}
@@ -85,8 +119,25 @@ export class CategoryController {
         }
     }
 
-    @HttpCode(200)
     @Patch(':id')
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Update sub-category." })
+    @ApiResponse({ status: 200, description: "Success." })
+    @ApiBody({
+        description: 'update',
+        required: true,
+        examples: {
+            example1: {
+                summary: 'update example',
+                value: {
+                    name: 'sub-category from swagger',
+                    description: 'Testing update in swagger',
+                    parent_category_id: "id"
+                }
+            }
+        }
+    })
     async update(@Param('id') id: string, @Body() updateCategoryDto: Partial<CreateCategoryDto>) {
         const result = await this.categoryService.update(id, updateCategoryDto);
         return {
@@ -117,8 +168,11 @@ export class CategoryController {
     //         message: "Category and related blogs have been deleted successfully."
     //     }
     // }
-    @HttpCode(200)
     @Delete(':id')
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Delete Category / Sub-Category and related blogs." })
+    @ApiResponse({ status: 200, description: "Success." })
     async remove(@Param('id') id: string) {
         // Recursive function to delete category and its related sub-categories and blogs
         const deleteCategoryAndRelated = async (categoryId: string) => {

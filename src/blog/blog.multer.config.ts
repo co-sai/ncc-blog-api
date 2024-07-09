@@ -1,6 +1,6 @@
 import { diskStorage } from 'multer';
 
-const MAX_VIDEO_SIZE = 10 * 1024 * 1024; // 10 MB in bytes
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB in bytes
 
 export const blogMulterConfig = {
   storage: diskStorage({
