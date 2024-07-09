@@ -10,9 +10,6 @@ export class Feedback extends Document {
 
     @Prop({ required: true })
     content: string;
-
-    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Blog', required: true })
-    blog_id: mongoose.Types.ObjectId;
 }
 
 export const FeedbackSchema = SchemaFactory.createForClass(Feedback);
