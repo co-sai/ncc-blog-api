@@ -14,10 +14,4 @@ export class CreateFeedbackDto {
     @IsString()
     @IsNotEmpty()
     content: string;
-
-    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Category' })
-    @IsNotEmpty()
-    @IsMongoId()
-    @Type(() => mongoose.Types.ObjectId)
-    blog_id: mongoose.Types.ObjectId;
 }

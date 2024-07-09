@@ -1,16 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags("Feedback API")
+@UseGuards(JwtAuthGuard)
 @Controller({ path: "feedback", version: "1" })
 export class FeedbackController {
     constructor(
         private readonly feedbackService: FeedbackService
     ) { }
 
-    @UseGuards(JwtAuthGuard)
     @Get()
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Feedback list" })
+    @ApiResponse({ status: 200, description: "Feedback list" })
     async feedbackList(
         @Query() query: { page: string, limit: string }
     ) {
@@ -30,6 +36,11 @@ export class FeedbackController {
     }
 
     @Post('add')
+    @HttpCode(201)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Success" })
+    @ApiResponse({ status: 201, description: "Add feedback" })
+    @ApiBody({ type: CreateFeedbackDto })
     async addFeedback(
         @Body() body: CreateFeedbackDto
     ) {
@@ -41,15 +52,18 @@ export class FeedbackController {
         }
     }
 
-    @UseGuards(JwtAuthGuard)
     @Delete(":id")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Delete feedback" })
+    @ApiResponse({ status: 200, description: "Feedback has been deleted successful." })
     async deleteFeedback(
         @Param("id") id: string
     ) {
         const feedback = await this.feedbackService.findByIdAndDelete(id);
 
         return {
-            message : "Feedback has been deleted successful."
+            message: "Feedback has been deleted successful."
         }
     }
 }

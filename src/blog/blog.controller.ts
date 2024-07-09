@@ -122,12 +122,8 @@ export class BlogController {
     @ApiResponse({ status: 200, description: "Blog detail" })
     async blogDetail(
         @Param("id") id: string,
-        @Query() query: { page : string, limit : string}
     ): Promise<any> {
-        const page = +query.page || 1;
-        const limit = +query.limit || 20;
         const blog = await this.blogService.findById(id);
-        const {feedbacks, total_count} = await this.feedbackService.findFeedbacksByBlogId(id, page, limit);
         if (!blog) {
             throw new InternalServerErrorException("Blog data not found.");
         }
@@ -137,11 +133,7 @@ export class BlogController {
 
         return {
             data : {
-                blog,
-                feedbacks,
-                page,
-                limit,
-                total_count
+                blog
             }
         };
     }
