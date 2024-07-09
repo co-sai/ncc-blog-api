@@ -1,5 +1,5 @@
 "use strict";
-import { Controller, Get, Post, Patch, Param, Body, UploadedFiles, Request, UseGuards, UseInterceptors, InternalServerErrorException, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UploadedFiles, Request, UseGuards, UseInterceptors, InternalServerErrorException, Delete, Query, HttpCode } from '@nestjs/common';
 import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
 import { BlogService } from './blog.service';
@@ -13,9 +13,12 @@ import { Public } from '../decorators/public.decorators';
 import { RequestInterface } from 'src/interface/request.interface';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { FeedbackService } from 'src/feedback/feedback.service';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
 
+
+@ApiTags("Blog API")
 @Controller({ path: "blog", version: "1" })
 @UseGuards(JwtAuthGuard)
 export class BlogController {
@@ -29,6 +32,34 @@ export class BlogController {
     ) { }
 
     @Post("add")
+    @HttpCode(201)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Create new blog" })
+    @ApiResponse({ status: 201, description: "Blog has been created successfully." })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: 'Create new blog',
+        schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', nullable: true, example: "IPhone 15 Pro Max" },
+                content: { type: 'string', nullable: true, example: "IPhone 15 Pro Max" },
+                external_link: { type: 'string', nullable: true, example: "external_link" },
+                message_link: { type: 'string', nullable: true, example: "message_link" },
+                rank: { type: 'string', nullable: true, example: "1" },
+                category_id: { type: 'string', nullable: true, example: "sub-category Id" },
+                medias: {
+                    type: 'array',
+                    items: {
+                        type: 'string',
+                        format: 'binary',
+                    },
+                    nullable: true,
+                },
+                main_media_index: { type: 'string', example: '0'}
+            }
+        }
+    })
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'medias', maxCount: 5 },
     ]))
@@ -86,6 +117,9 @@ export class BlogController {
 
     @Public()
     @Get(":id")
+    @HttpCode(200)
+    @ApiOperation({ summary: "Blog Detail" })
+    @ApiResponse({ status: 200, description: "Blog detail" })
     async blogDetail(
         @Param("id") id: string,
         @Query() query: { page : string, limit : string}
@@ -114,6 +148,43 @@ export class BlogController {
 
     /** We don't update main_media */
     @Patch(":id")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Update blog" })
+    @ApiResponse({ status: 200, description: "Blog has been updated successfully." })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: 'Update blog',
+        schema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', nullable: true, example: "IPhone 15 Pro Max" },
+                content: { type: 'string', nullable: true, example: "IPhone 15 Pro Max" },
+                external_link: { type: 'string', nullable: true, example: "external_link" },
+                message_link: { type: 'string', nullable: true, example: "message_link" },
+                rank: { type: 'string', nullable: true, example: "1" },
+                category_id: { type: 'string', nullable: true, example: "sub-category Id" },
+                medias: {
+                    type: 'array',
+                    items: {
+                        type: 'string',
+                        format: 'binary',
+                    },
+                    nullable: true,
+                },
+                mediasIndices : { type: "string", nullable: true, example: "[0,1]" },
+                medias_to_remove: { type: "string", nullable: true, example: "[0,1]" },
+                new_medias: {
+                    type: 'array',
+                    items: {
+                        type: 'string',
+                        format: 'binary',
+                    },
+                    nullable: true,
+                },
+            }
+        }
+    })
     @UseInterceptors(FileFieldsInterceptor([
         { name: 'medias', maxCount: 5 },
         { name: 'new_medias', maxCount: 5 }
@@ -226,6 +297,22 @@ export class BlogController {
     }
 
     @Patch(":id/set-main-media")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Update blog main-media" })
+    @ApiResponse({ status: 200, description: "success" })
+    @ApiBody({
+        description: 'Update blog main-media',
+        required: true,
+        examples: {
+            example1: {
+                summary: 'Update blog main-media',
+                value: {
+                    main_media_index: '0',
+                }
+            }
+        }
+    })
     async setMainMedia(
         @Param("id") id: string,
         @Body() body : { main_media_index : number }
@@ -252,6 +339,22 @@ export class BlogController {
     }
 
     @Patch(":id/set-rank")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Update blog rank" })
+    @ApiResponse({ status: 200, description: "success" })
+    @ApiBody({
+        description: 'Update blog rank',
+        required: true,
+        examples: {
+            example1: {
+                summary: 'Update blog rank',
+                value: {
+                    rank: 2,
+                }
+            }
+        }
+    })
     async setRank(
         @Param("id") id: string,
         @Body() body : { rank : number }
@@ -275,6 +378,10 @@ export class BlogController {
 
     // Delete Product -> Done - Need to remove old image from product
     @Delete("/:id")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Delete blog" })
+    @ApiResponse({ status: 200, description: "success" })
     async deleteProduct(@Param("id") id: string, @Request() req: RequestInterface) {
         const _id = req.user._id;
         const { role_id } = (await this.adminService.findById(_id)).toJSON();

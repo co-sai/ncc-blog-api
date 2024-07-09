@@ -17,29 +17,32 @@ export class CreateAdminDto {
 
     @ApiProperty({ example: 'john@gmail.com' })
     @IsEmail()
-    email: string;
+    @IsOptional()
+    email?: string;
 
     @ApiProperty({ example: '0925000000' })
     @IsString()
-    country_code: string;
+    @IsOptional()
+    country_code?: string;
 
     @ApiProperty({ example: '0925000000' })
     @IsString()
-    phone_number: string;
+    @IsOptional()
+    phone_number?: string;
 
     @IsString()
     @IsOptional()
-    photo: string;
+    photo?: string;
 
     @IsString()
     @IsOptional()
-    avatar: string;
+    avatar?: string;
 
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Role' })
     @IsNotEmpty()
     @IsMongoId()
     @Type(() => mongoose.Types.ObjectId)
-    role_id: string;
+    role_id?: string;
 
     @ApiProperty({ example: 'password' })
     @IsNotEmpty()

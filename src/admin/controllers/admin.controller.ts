@@ -16,10 +16,12 @@ import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 
 import { RequestInterface } from 'src/interface/request.interface';
 import { CreateAdminDto } from '../dto/create-admin.dto';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 const scrypt = promisify(_scrypt);
 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
 
+@ApiTags("Admin API")
 @UseGuards(JwtAuthGuard)
 @Controller({ path: "admin", version: "1" })
 export class AdminController {
@@ -31,19 +33,23 @@ export class AdminController {
         private readonly configService: ConfigService
     ) { }
 
-    @HttpCode(200)
     @Get("profile")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Current logged-in admin profile" })
     async adminProfile(@Request() req: RequestInterface) {
         const id = req.user._id;
         const admin = await this.adminService.findById(id);
         const { password, reset_token, reset_token_expiration, ...result } = admin.toJSON();
         return {
-            data: admin
+            data: result
         }
     }
 
-    @HttpCode(200)
     @Get("list")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Admin list" })
     async adminList(@Request() req: RequestInterface) {
         const { role_id } = (await this.adminService.findById(req.user._id)).toJSON();
         if (!role_id) {
@@ -59,8 +65,10 @@ export class AdminController {
         }
     }
 
-    @HttpCode(200)
     @Get("role")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Role list" })
     async findAllRole() {
         const role = await this.adminService.findAllRole();
         return {
@@ -68,8 +76,10 @@ export class AdminController {
         }
     }
 
-    @HttpCode(200)
     @Get("/:id")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Admin detail" })
     async adminDetail(
         @Request() req: RequestInterface,
         @Param("id") id: string
@@ -88,8 +98,28 @@ export class AdminController {
         }
     }
 
-    @HttpCode(201)
     @Post('create')
+    @HttpCode(201)
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: "Create new Admin By Super Admin" })
+    @ApiResponse({ status: 201, description: "Success." })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: 'Create Admin',
+        schema: {
+            type: 'object',
+            properties: {
+                first_name: { type: 'string', example: "first name" },
+                last_name: { type: 'string', example: "last name" },
+                email: { type: 'string', example: "admin@gmail.com" },
+                country_code: { type: 'string', example: "+95"},
+                phone_number: { type: 'string', example: "9299999999" },
+                role_id: { type: 'string', example: "66836a97dc331c20cbbdc8f2" },
+                password: { type: 'string', example: "admin@123" },
+                photo: { type: 'string', format: 'binary' }
+            },
+        },
+    })
     @UseInterceptors(FileFieldsInterceptor(
         [
             { name: 'photo', maxCount: 1 },
@@ -131,7 +161,7 @@ export class AdminController {
                 const newFilename = await this.fileService.generateFileName(`${files.photo[0].filename}-${uniqueSuffix}-photo`, files.photo[0], "uploads/admin");
                 admin.photo = `uploads/admin/${newFilename}`;
             } else {
-                admin.avatar = `uploads/avatar/avatar.jpg}`;
+                admin.avatar = `uploads/avatar/avatar.jpg`;
             }
 
             await admin.save();
@@ -154,8 +184,27 @@ export class AdminController {
         }
     }
 
-    @HttpCode(200)
     @Patch("/:id")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Update Admin By Super Admin / It-self" })
+    @ApiResponse({ status: 200, description: "Account has been updated." })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: 'Update Admin',
+        schema: {
+            type: 'object',
+            properties: {
+                first_name: { type: 'string', nullable : true, example: "Updated First name" },
+                last_name: { type: 'string', nullable : true, example: "Updated Last name" },
+                email: { type: 'string', nullable : true, example: "Updated email" },
+                country_code: { type: 'string', nullable : true, example: "+95" },
+                phone_number: { type: 'string', nullable : true, example: "9888888888" },
+                role_id: { type: 'string', nullable : true, example: "66836a97dc331c20cbbdc8f2" },
+                photo: { type: 'string', format: 'binary', nullable : true }
+            }
+        },
+    })
     @UseInterceptors(FileFieldsInterceptor(
         [
             { name: 'photo', maxCount: 1 },
@@ -209,7 +258,7 @@ export class AdminController {
         if (files.photo) {
             // check old file and delete it
             if (admin.photo) {
-                await this.fileService.deleteFiles([path.join(uploadFolder, admin.photo)]);
+                await this.fileService.deleteFiles([path.join(process.cwd(), admin.photo)]);
             }
 
             const newFilename = await this.fileService.generateFileName(`${files.photo[0].filename}-${uniqueSuffix}-photo`, files.photo[0], "uploads/admin");
@@ -240,8 +289,10 @@ export class AdminController {
         }
     }
 
-    @HttpCode(200)
     @Delete("/:id")
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Delete admin account by Super Admin / It-self" })
     async deleteAccount(
         @Param("id") id: string,
         @Request() req: RequestInterface

@@ -9,9 +9,11 @@ import { RequestInterface } from 'src/interface/request.interface';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { MailService } from 'src/mail/services/mail.service';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 const scrypt = promisify(_scrypt);
 
+@ApiTags("Admin Authentication API")
 @Controller({ path: "auth/admin", version: "1" })
 export class AdminAuthController {
     constructor(
@@ -23,6 +25,21 @@ export class AdminAuthController {
 
     @Post("sign-in")
     @HttpCode(200)
+    @ApiOperation({ summary: "Admin Login" })
+    @ApiResponse({ status: 200, description: "Success." })
+    @ApiBody({
+        description: 'Admin login data',
+        required: true,
+        examples: {
+            example1: {
+                summary: 'Admin login example',
+                value: {
+                    email: 'superadmin@gmail.com',
+                    password: 'password@123',
+                }
+            }
+        }
+    })
     async signIn(
         @Body() body: any
     ) {
@@ -41,6 +58,20 @@ export class AdminAuthController {
 
     @Post('forget-password')
     @HttpCode(200)
+    @ApiOperation({ summary: "Admin forget password" })
+    @ApiResponse({ status: 200, description: "Check your mail for a link to reset your password." })
+    @ApiBody({
+        description: 'Admin forget password',
+        required: true,
+        examples: {
+            example1: {
+                summary: 'Admin forget password example',
+                value: {
+                    email: 'superadmin@gmail.com',
+                }
+            }
+        }
+    })
     async forgetPassword(@Body() body: { email: string }) {
         const email = body.email;
 
@@ -66,6 +97,22 @@ export class AdminAuthController {
     }
 
     @Post('reset-password')
+    @HttpCode(200)
+    @ApiOperation({ summary: "Admin reset password" })
+    @ApiResponse({ status: 200, description: "Password has been updated successfully." })
+    @ApiBody({
+        description: 'Admin reset password',
+        required: true,
+        examples: {
+            example1: {
+                summary: 'Admin reset password example',
+                value: {
+                    reset_token: 'token',
+                    password: "new-password"
+                }
+            }
+        }
+    })
     async resetPassword(
         @Body() body: any
     ) {
@@ -100,6 +147,21 @@ export class AdminAuthController {
     @UseGuards(JwtAuthGuard)
     @Post("update-password")
     @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Admin update password" })
+    @ApiResponse({ status: 200, description: "Password has been updated." })
+    @ApiBody({
+        description: 'Admin update password',
+        required: true,
+        examples: {
+            example1: {
+                summary: 'Admin update password example',
+                value: {
+                    password: "new-password"
+                }
+            }
+        }
+    })
     async updatePassword(
         @Request() req : RequestInterface,
         @Body() body : { password : string }
