@@ -13,10 +13,19 @@ import { Public } from '../decorators/public.decorators';
 import { RequestInterface } from 'src/interface/request.interface';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { FeedbackService } from 'src/feedback/feedback.service';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
 
+import { IsIn } from 'class-validator';
+import { Blog } from './schema/blog.schema';
+
+export class BlogListFilterDto {
+    @IsIn(['rank', 'view'])
+    q: string;
+    limit: string;
+    page: string
+}
 
 @ApiTags("Blog API")
 @Controller({ path: "blog", version: "1" })
@@ -30,6 +39,30 @@ export class BlogController {
         private readonly adminService: AdminService,
         private readonly feedbackService: FeedbackService
     ) { }
+
+    @Get()
+    @HttpCode(200)
+    @ApiBearerAuth("access-token")
+    @ApiOperation({ summary: "Blogs filter by Rank or View" })
+    @ApiResponse({ status: 200, description: "Blogs list" })
+    @ApiQuery({ name: 'q', required: false, description: 'Filter by rank or view' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Limit the number of results' })
+    @ApiQuery({ name: 'page', required: false, description: 'Page number for pagination' })
+    async blogListFilterByViewAndRank(
+        @Query() query: any,
+    ): Promise<{ data: Blog[], total_count: number, limit: number, page: number }> {
+        const q = query.q;
+        const page = +query.page || 1;
+        const limit = +query.limit || 20
+        const { blogs, total_count } = await this.blogService.filterAndSortBlogs(q, limit, page);
+
+        return {
+            data: blogs,
+            total_count,
+            limit,
+            page
+        };
+    }
 
     @Post("add")
     @HttpCode(201)
@@ -56,7 +89,7 @@ export class BlogController {
                     },
                     nullable: true,
                 },
-                main_media_index: { type: 'string', example: '0'}
+                main_media_index: { type: 'string', example: '0' }
             }
         }
     })
@@ -132,7 +165,7 @@ export class BlogController {
         await blog.save();
 
         return {
-            data : {
+            data: {
                 blog
             }
         };
@@ -164,7 +197,7 @@ export class BlogController {
                     },
                     nullable: true,
                 },
-                mediasIndices : { type: "string", nullable: true, example: "[0,1]" },
+                mediasIndices: { type: "string", nullable: true, example: "[0,1]" },
                 medias_to_remove: { type: "string", nullable: true, example: "[0,1]" },
                 new_medias: {
                     type: 'array',
@@ -307,7 +340,7 @@ export class BlogController {
     })
     async setMainMedia(
         @Param("id") id: string,
-        @Body() body : { main_media_index : number }
+        @Body() body: { main_media_index: number }
     ): Promise<any> {
         const { main_media_index } = body;
 
@@ -349,7 +382,7 @@ export class BlogController {
     })
     async setRank(
         @Param("id") id: string,
-        @Body() body : { rank : number }
+        @Body() body: { rank: number }
     ): Promise<any> {
         const { rank } = body;
 
