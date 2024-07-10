@@ -56,4 +56,20 @@ export class BlogService {
     async findByIdAndDelete(id: string) {
         await this.blogModel.findByIdAndDelete(id);
     }
+
+    async filterAndSortBlogs(q: string, limit: number, page: number): Promise<{ blogs: Blog[], total_count: number }> {
+        const sortOrder: { [key: string]: 1 | -1 } = q === 'rank' ? { rank: 1 } : { view: -1 };
+        const skip = (page - 1) * limit;
+
+        const blogs = await this.blogModel.find()
+            .sort(sortOrder)
+            .select("title content main_media view rank")
+            .limit(limit)
+            .skip(skip)
+            .exec();
+
+        const total_count = await this.blogModel.countDocuments().exec();
+
+        return { blogs, total_count };
+    }
 }
