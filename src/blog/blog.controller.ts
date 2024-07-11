@@ -40,9 +40,9 @@ export class BlogController {
         private readonly feedbackService: FeedbackService
     ) { }
 
+    @Public()
     @Get()
     @HttpCode(200)
-    @ApiBearerAuth("access-token")
     @ApiOperation({ summary: "Blogs filter by Rank or View" })
     @ApiResponse({ status: 200, description: "Blogs list" })
     @ApiQuery({ name: 'q', required: false, description: 'Filter by rank or view' })
