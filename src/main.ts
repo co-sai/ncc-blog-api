@@ -52,7 +52,22 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  // SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      defaultModelsExpandDepth: -1,
+      docExpansion: 'none',
+    },
+    customSiteTitle: 'API Docs',
+    customCss: '.swagger-ui .topbar { display: none }',
+  });
+
+  // Middleware to remove security headers
+  app.use((req, res, next) => {
+    res.removeHeader('Cross-Origin-Opener-Policy');
+    res.removeHeader('Origin-Agent-Cluster');
+    next();
+  });
 
   await app.listen(8000);
 }
