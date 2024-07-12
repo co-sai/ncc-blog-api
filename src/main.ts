@@ -14,7 +14,14 @@ import { AllExceptionsFilter } from './utils/all-exceptions.filter';
 async function bootstrap() {
   createUploadDirectories();
 
-  const app = await NestFactory.create(AppModule);
+  const httpsOptions = {
+    key: fs.readFileSync('path/to/server.key'),
+    cert: fs.readFileSync('path/to/server.cert'),
+  };
+
+  const app = await NestFactory.create(AppModule, {
+    httpsOptions,
+  });
 
   // Get the Winston logger
   const logger = app.get<Logger>(WINSTON_MODULE_PROVIDER);
