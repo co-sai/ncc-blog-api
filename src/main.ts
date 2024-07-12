@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import path from 'path';
 import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -15,8 +16,8 @@ async function bootstrap() {
   createUploadDirectories();
 
   const httpsOptions = {
-    key: fs.readFileSync('path/to/server.key'),
-    cert: fs.readFileSync('path/to/server.cert'),
+    key: fs.readFileSync(path.join(process.cwd(), "server.key")),
+    cert: fs.readFileSync(path.join(process.cwd(), "server.cert")),
   };
 
   const app = await NestFactory.create(AppModule, {
