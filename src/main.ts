@@ -44,6 +44,13 @@ async function bootstrap() {
   // Set a global prefix for all routes
   app.setGlobalPrefix('api');
 
+  // Middleware to remove security headers
+  app.use((req, res, next) => {
+    res.removeHeader('Cross-Origin-Opener-Policy');
+    res.removeHeader('Origin-Agent-Cluster');
+    next();
+  });
+
   const config = new DocumentBuilder()
     .setTitle('E-Commerce API Documentation')
     .setDescription('')
@@ -60,13 +67,6 @@ async function bootstrap() {
     },
     customSiteTitle: 'API Docs',
     customCss: '.swagger-ui .topbar { display: none }',
-  });
-
-  // Middleware to remove security headers
-  app.use((req, res, next) => {
-    res.removeHeader('Cross-Origin-Opener-Policy');
-    res.removeHeader('Origin-Agent-Cluster');
-    next();
   });
 
   await app.listen(8000);
