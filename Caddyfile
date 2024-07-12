@@ -1,0 +1,7 @@
+{
+    auto_https off
+}
+
+162.0.225.227 {
+    reverse_proxy localhost:8000
+}
