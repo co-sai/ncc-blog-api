@@ -18,7 +18,14 @@ dotenv.config();
 async function bootstrap() {
   createUploadDirectories();
 
-  const app = await NestFactory.create(AppModule);
+  const httpsOptions = {
+    key: fs.readFileSync(path.join(process.cwd(), "server.key")),
+    cert: fs.readFileSync(path.join(process.cwd(), "server.cert")),
+  };
+
+  const app = await NestFactory.create(AppModule, {
+    httpsOptions,
+  });
 
   // Get the Winston logger
   const logger = app.get<Logger>(WINSTON_MODULE_PROVIDER);
@@ -48,6 +55,13 @@ async function bootstrap() {
   // Set a global prefix for all routes
   app.setGlobalPrefix('api');
 
+  // Middleware to remove security headers
+  app.use((req, res, next) => {
+    res.removeHeader('Cross-Origin-Opener-Policy');
+    res.removeHeader('Origin-Agent-Cluster');
+    next();
+  });
+
   const config = new DocumentBuilder()
     .setTitle('E-Commerce API Documentation')
     .setDescription('')
@@ -56,7 +70,15 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  // SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      defaultModelsExpandDepth: -1,
+      docExpansion: 'none',
+    },
+    customSiteTitle: 'API Docs',
+    customCss: '.swagger-ui .topbar { display: none }',
+  });
 
   await app.listen(8000);
 }
