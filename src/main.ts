@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as dotenv from 'dotenv';
 import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -10,6 +11,8 @@ import { VersioningType } from '@nestjs/common';
 import { Logger } from 'winston';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { AllExceptionsFilter } from './utils/all-exceptions.filter';
+
+dotenv.config();
 
 async function bootstrap() {
   createUploadDirectories();
@@ -24,7 +27,7 @@ async function bootstrap() {
 
   // Define CORS options
   const corsOptions: CorsOptions = {
-    origin: 'http://localhost:3000', // restrict calls to those from this origin
+    origin: process.env.FRONT_END_URL || 'http://localhost:3000', // restrict calls to those from this origin
     methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS', // allow these HTTP methods
     allowedHeaders: 'Content-Type, Authorization', // allow these headers
     credentials: true,
