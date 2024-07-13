@@ -28,7 +28,7 @@ async function bootstrap() {
 
   // Define CORS options
   const corsOptions: CorsOptions = {
-    origin: 'http://162.0.225.227:3000', // restrict calls to those from this origin
+    origin: 'http://localhost:3000', // restrict calls to those from this origin
     methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS', // allow these HTTP methods
     allowedHeaders: 'Content-Type, Authorization', // allow these headers
     credentials: true,
