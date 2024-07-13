@@ -26,9 +26,16 @@ async function bootstrap() {
   // Register the global exception filter
   app.useGlobalFilters(new AllExceptionsFilter(logger));
 
+  const allowedOrigins = ['http://localhost:3000', 'http://162.0.225.227:3000'];
   // Define CORS options
   const corsOptions: CorsOptions = {
-    origin: 'http://localhost:3000', // restrict calls to those from this origin
+    origin: (origin, callback) => {
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS', // allow these HTTP methods
     allowedHeaders: 'Content-Type, Authorization', // allow these headers
     credentials: true,
