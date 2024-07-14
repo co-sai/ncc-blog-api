@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import * as dotenv from 'dotenv';
 import helmet from 'helmet';
 import { NestFactory } from '@nestjs/core';
@@ -27,7 +28,19 @@ async function bootstrap() {
 
   // Define CORS options
   const corsOptions: CorsOptions = {
-    origin: process.env.FRONT_END_URL || 'http://localhost:3000', // restrict calls to those from this origin
+    origin: (origin, callback) => {
+      if (!origin || process.env.NODE_ENV === 'development') {
+        // Allow all origins in development mode
+        callback(null, true);
+      } else {
+        const allowedOrigins = ['http://localhost:3000', 'http://162.0.225.227:3000'];
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      }
+    },
     methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS', // allow these HTTP methods
     allowedHeaders: 'Content-Type, Authorization', // allow these headers
     credentials: true,
