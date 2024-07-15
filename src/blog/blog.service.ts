@@ -58,18 +58,22 @@ export class BlogService {
     }
 
     async filterAndSortBlogs(q: string, limit: number, page: number, random: Boolean): Promise<{ blogs: Blog[], total_count: number }> {
+
         let blogs: Blog[];
         const skip = (page - 1) * limit;
+        const total_count = await this.blogModel.countDocuments().exec();
 
         if (random) {
-            // Get the total count of blogs
-            const total_count = await this.blogModel.countDocuments().exec();
-            // Generate an array of random skip values
-            const randomSkips = Array.from({ length: limit }, () => Math.floor(Math.random() * total_count));
-            // Fetch blogs at random positions
-            const blogPromises = randomSkips.map(skip =>
+            const randomIndices = new Set<number>();
+
+            while (randomIndices.size < Math.min(limit, total_count)) {
+                randomIndices.add(Math.floor(Math.random() * total_count));
+            }
+
+            const blogPromises = Array.from(randomIndices).map(skip =>
                 this.blogModel.findOne().skip(skip).select("title content main_media view rank").exec()
             );
+
             blogs = await Promise.all(blogPromises);
         } else {
             const sortOrder: { [key: string]: 1 | -1 } = q === 'rank' ? { rank: 1 } : { view: -1 };
@@ -80,7 +84,6 @@ export class BlogService {
                 .skip(skip)
                 .exec();
         }
-        const total_count = await this.blogModel.countDocuments().exec();
 
         return { blogs, total_count };
     }
