@@ -96,6 +96,23 @@ export class CategoryService {
         return await this.categoryModel.findByIdAndDelete(id).exec();
     }
 
+    async filterByName(q: string, page: number, limit: number){
+        const searchTerm = q.trim();
+        if (!searchTerm) {
+            return [];
+        }
+        const result = await this.categoryModel.find({
+            $and: [
+                { name: { $regex: new RegExp(searchTerm, 'i') } },
+                { parent_category_id : { $ne: null } }
+            ]
+        })
+            .select("name")
+            .exec();
+
+        return result;
+    }
+
     private async deleteNestedCategories(parentCategoryId: string): Promise<void> {
         const subCategories = await this.categoryModel.find({ parent_category_id: parentCategoryId }).exec();
 

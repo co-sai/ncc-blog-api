@@ -87,4 +87,24 @@ export class BlogService {
 
         return { blogs, total_count };
     }
+
+    async filterByName(q: string, page: number, limit: number): Promise<{ blogs: Blog[], total_count: number }> {
+        const searchTerm = q.trim();
+        if (!searchTerm) {
+            return { blogs : [], total_count: 0 };
+        }
+        const blogs = await this.blogModel.find({
+            title: { $regex: new RegExp(searchTerm, 'i') }
+        })
+            .select("_id title")
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .exec();
+
+        const total_count = await this.blogModel.find({
+            title: { $regex: new RegExp(searchTerm, 'i') }
+        }).countDocuments();
+
+        return { blogs, total_count };
+    }
 }
