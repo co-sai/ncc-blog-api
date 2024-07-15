@@ -66,6 +66,46 @@ export class BlogController {
         };
     }
 
+    @Public()
+    @Get("/search")
+    @HttpCode(200)
+    @ApiOperation({ summary: "Blogs searching" })
+    @ApiResponse({ status: 200, description: "Blogs list" })
+    @ApiQuery({ name: 'q', required: false, description: 'Blog searching key' })
+    @ApiQuery({ name: 'limit', required: false, description: 'Limit the number of results' })
+    @ApiQuery({ name: 'page', required: false, description: 'Page number for pagination' })
+    async blogSearching(
+        @Query() query: any,
+    ) {
+        const q = query.q ? query.q.trim() : '';
+        const page = +query.page || 1;
+        const limit = +query.limit || 20;
+
+        // If q is empty, return empty arrays
+        if (!q) {
+            return {
+                data: {
+                    categories: [],
+                    blogs: []
+                }
+            };
+        }
+
+        const categories = await this.categoryService.filterByName(q, page, limit);
+        const { blogs, total_count } = await this.blogService.filterByName(q, page, limit);
+
+        return {
+            data: {
+                categories,
+                blogs,
+                total_count,
+                limit,
+                page
+            }
+        }
+
+    }
+
     @Post("add")
     @HttpCode(201)
     @ApiBearerAuth("access-token")
