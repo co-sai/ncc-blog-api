@@ -43,9 +43,9 @@ export class BlogController {
     @Public()
     @Get()
     @HttpCode(200)
-    @ApiOperation({ summary: "Blogs filter by Rank or View" })
+    @ApiOperation({ summary: "Blogs filter by Rank or View or Random" })
     @ApiResponse({ status: 200, description: "Blogs list" })
-    @ApiQuery({ name: 'q', required: false, description: 'Filter by rank or view' })
+    @ApiQuery({ name: 'q', required: false, description: 'Filter by rank or view or random' })
     @ApiQuery({ name: 'limit', required: false, description: 'Limit the number of results' })
     @ApiQuery({ name: 'page', required: false, description: 'Page number for pagination' })
     async blogListFilterByViewAndRank(
@@ -54,7 +54,9 @@ export class BlogController {
         const q = query.q;
         const page = +query.page || 1;
         const limit = +query.limit || 20
-        const { blogs, total_count } = await this.blogService.filterAndSortBlogs(q, limit, page);
+        const random = query.random === 'true';
+
+        const { blogs, total_count } = await this.blogService.filterAndSortBlogs(q, limit, page, random);
 
         return {
             data: blogs,
