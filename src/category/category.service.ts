@@ -101,40 +101,42 @@ export class CategoryService {
         if (!searchTerm) {
             return [];
         }
-        // const result = await this.categoryModel.find({
-        //     $and: [
-        //         { name: { $regex: new RegExp(searchTerm, 'i') } },
-        //         // { parent_category_id : { $ne: null } }
-        //     ]
-        // })
-        //     // .select("name")
-        //     .exec();
+        const result = await this.categoryModel.find({
+            $and: [
+                { name: { $regex: new RegExp(searchTerm, 'i') } },
+                { parent_category_id : { $ne: null } }
+            ]
+        })
+            // .select("name")
+            .populate("parent_category_id", "_id name")
+            .select("name")
+            .exec();
 
-        // return result;
-        const result = await this.categoryModel.aggregate([
-            {
-                $match: {
-                    name: { $regex: new RegExp(searchTerm, 'i') }
-                }
-            },
-            {
-                $facet: {
-                    parent_category: [
-                        { $match: { parent_category_id: null } },
-                        { $project: { name: 1, _id: 1 } },
-                        { $skip: (page - 1) * limit },
-                        { $limit: limit }
-                    ],
-                    sub_category: [
-                        { $match: { parent_category_id: { $ne: null } } },
-                        { $project: { name: 1, _id: 1 } },
-                        { $skip: (page - 1) * limit },
-                        { $limit: limit }
-                    ]
-                }
-            }
-        ]).exec();
-        return result[0];
+        return result;
+        // const result = await this.categoryModel.aggregate([
+        //     {
+        //         $match: {
+        //             name: { $regex: new RegExp(searchTerm, 'i') }
+        //         }
+        //     },
+        //     {
+        //         $facet: {
+        //             parent_category: [
+        //                 { $match: { parent_category_id: null } },
+        //                 { $project: { name: 1, _id: 1 } },
+        //                 { $skip: (page - 1) * limit },
+        //                 { $limit: limit }
+        //             ],
+        //             sub_category: [
+        //                 { $match: { parent_category_id: { $ne: null } } },
+        //                 { $project: { name: 1, _id: 1 } },
+        //                 { $skip: (page - 1) * limit },
+        //                 { $limit: limit }
+        //             ]
+        //         }
+        //     }
+        // ]).exec();
+        // return result[0];
     }
 
     private async deleteNestedCategories(parentCategoryId: string): Promise<void> {

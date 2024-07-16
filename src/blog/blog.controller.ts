@@ -91,12 +91,12 @@ export class BlogController {
             };
         }
 
-        const { parent_category, sub_category } = await this.categoryService.filterByName(q, page, limit);
+        const  sub_category = await this.categoryService.filterByName(q, page, limit);
         const { blogs, total_count } = await this.blogService.filterByName(q, page, limit);
 
         return {
             data: {
-                parent_category,
+                // parent_category,
                 sub_category,
                 blogs,
                 total_count,
