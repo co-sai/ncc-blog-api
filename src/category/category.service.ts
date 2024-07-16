@@ -51,12 +51,12 @@ export class CategoryService {
         return await this.categoryModel.find({
             parent_category_id: { $ne: null }
         })
-        .populate({
-            path : "parent_category_id",
-            model: "Category",
-            select: "_id name"
-        })
-        .exec();
+            .populate({
+                path: "parent_category_id",
+                model: "Category",
+                select: "_id name"
+            })
+            .exec();
     }
 
     /** Find sub-category by Id */
@@ -96,21 +96,45 @@ export class CategoryService {
         return await this.categoryModel.findByIdAndDelete(id).exec();
     }
 
-    async filterByName(q: string, page: number, limit: number){
+    async filterByName(q: string, page: number, limit: number) {
         const searchTerm = q.trim();
         if (!searchTerm) {
             return [];
         }
-        const result = await this.categoryModel.find({
-            $and: [
-                { name: { $regex: new RegExp(searchTerm, 'i') } },
-                { parent_category_id : { $ne: null } }
-            ]
-        })
-            .select("name")
-            .exec();
+        // const result = await this.categoryModel.find({
+        //     $and: [
+        //         { name: { $regex: new RegExp(searchTerm, 'i') } },
+        //         // { parent_category_id : { $ne: null } }
+        //     ]
+        // })
+        //     // .select("name")
+        //     .exec();
 
-        return result;
+        // return result;
+        const result = await this.categoryModel.aggregate([
+            {
+                $match: {
+                    name: { $regex: new RegExp(searchTerm, 'i') }
+                }
+            },
+            {
+                $facet: {
+                    parent_category: [
+                        { $match: { parent_category_id: null } },
+                        { $project: { name: 1, _id: 1 } },
+                        { $skip: (page - 1) * limit },
+                        { $limit: limit }
+                    ],
+                    sub_category: [
+                        { $match: { parent_category_id: { $ne: null } } },
+                        { $project: { name: 1, _id: 1 } },
+                        { $skip: (page - 1) * limit },
+                        { $limit: limit }
+                    ]
+                }
+            }
+        ]).exec();
+        return result[0];
     }
 
     private async deleteNestedCategories(parentCategoryId: string): Promise<void> {
