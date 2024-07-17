@@ -11,7 +11,7 @@ export const blogMulterConfig = {
   }),
   fileFilter: (req, file, cb) => {
     // Accept image files and video files with size limit
-    if (file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+    if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
       cb(null, true);
     } else if (file.mimetype.match(/\/(mp4|avi|mkv|mov)$/)) {
       if (file.size > MAX_VIDEO_SIZE) {
