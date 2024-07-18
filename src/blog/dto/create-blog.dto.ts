@@ -27,10 +27,6 @@ export class CreateBlogDto {
     @IsNotEmpty()
     rank: string;
 
-    @IsOptional()
-    @IsString()
-    main_media_index?: string;
-
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Category' })
     @IsNotEmpty()
     @IsMongoId()

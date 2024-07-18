@@ -27,22 +27,10 @@ export class UpdateBlogDto {
     @IsOptional()
     rank: string;
 
-    @IsOptional()
-    @IsOptional()
-    main_media_index?: string;
-
-     /** These two are one pair => medias and mediasIndices */
+    /** These two are one pair => medias and mediasIndices */
     medias?: Express.Multer.File[];
 
-    @IsOptional()
-    mediasIndices?: string; // update image from medias
-
-   
-    @IsArray()
-    @IsNumber({}, { each: true })
-    medias_to_remove?: string; // Array of indices of images to remove from related_image array
-
-    new_medias?: Express.Multer.File[];
+    medias_to_remove?: any;
 
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Category' })
     @IsNotEmpty()

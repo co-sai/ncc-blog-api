@@ -11,12 +11,6 @@ export class Blog extends Document {
     @Prop({ required: true })
     content: string;
 
-    @Prop({ default: null })
-    main_media: string;
-
-    @Prop({ default: null })
-    medias: string[];
-
     @Prop({ required: true })
     external_link: string;
 

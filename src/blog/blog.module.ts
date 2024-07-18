@@ -11,15 +11,17 @@ import { blogMulterConfig } from './blog.multer.config';
 import { CategoryModule } from 'src/category/category.module';
 import { AdminModule } from 'src/admin/admin.module';
 import { FeedbackModule } from 'src/feedback/feedback.module';
+import { Media, MediaSchema } from './schema/media.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Blog.name, schema: BlogSchema },
+      { name: Media.name, schema: MediaSchema }
     ]),
     MulterModule.register(blogMulterConfig),
     CommonModule,
-    forwardRef(()=> CategoryModule),
+    forwardRef(() => CategoryModule),
     AdminModule,
     FeedbackModule
   ],

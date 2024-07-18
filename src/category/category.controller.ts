@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, InternalServerErrorException, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-
+import * as path from 'path';
 import { CategoryService } from './category.service';
 import { FileService } from 'src/common/file/file.service';
 import { BlogService } from 'src/blog/blog.service';
@@ -36,7 +36,7 @@ export class CategoryController {
     @Public()
     @Get()
     @HttpCode(200)
-    @ApiOperation({ summary: "Category List including sub-category for learning page."})
+    @ApiOperation({ summary: "Category List including sub-category for learning page." })
     async findAll() {
         const result = await this.categoryService.findAll();
         return {
@@ -47,7 +47,7 @@ export class CategoryController {
     @Get("parent")
     @HttpCode(200)
     @ApiBearerAuth("access-token")
-    @ApiOperation({ summary: "Parent category list for create sub-category."})
+    @ApiOperation({ summary: "Parent category list for create sub-category." })
     async findParentCategory() {
         const result = await this.categoryService.findParentCategory();
         return {
@@ -58,7 +58,7 @@ export class CategoryController {
     @Get("sub-category")
     @HttpCode(200)
     @ApiBearerAuth("access-token")
-    @ApiOperation({ summary:  "Sub-category list for create blog."})
+    @ApiOperation({ summary: "Sub-category list for create blog." })
     async findSubCategory() {
         const result = await this.categoryService.findAllSubCategory();
         return {
@@ -96,11 +96,11 @@ export class CategoryController {
     @Public()
     @Get(':id')
     @HttpCode(200)
-    @ApiOperation({ summary : "List of Category / Sub-category and related product."})
-    @ApiResponse({ status : 200, description : "List of Category / Sub-category and related products."})
+    @ApiOperation({ summary: "List of Category / Sub-category and related product." })
+    @ApiResponse({ status: 200, description: "List of Category / Sub-category and related products." })
     async findOne(
         @Param('id') id: string,
-        @Query() query : { page : string, limit : string}
+        @Query() query: { page: string, limit: string }
     ) {
         const page = +query.page || 1;
         const limit = +query.limit || 20;
@@ -108,10 +108,24 @@ export class CategoryController {
         const category = await this.categoryService.findOne(id);
         const { blogs, total_count } = await this.blogService.findBlogsByCategoryId(id, page, limit);
 
+        // Extract blog IDs
+        const blogIds = blogs.map(blog => blog._id);
+        // Fetch media documents
+        const medias = await this.blogService.findMediasByBlogIds(blogIds);
+
+        // Map media documents to their corresponding blogs
+        const blogData = blogs.map(blog => {
+            const blogMedias = medias.filter(media => media.blog_id.toString() === blog._id.toString());
+            return {
+                ...blog.toObject(),
+                medias: blogMedias.map(media => ({ _id: media._id, path: media.path }))
+            };
+        });
+
         return {
             data: {
                 category,
-                blogs,
+                blogs: blogData,
                 page,
                 limit,
                 total_count
@@ -188,8 +202,17 @@ export class CategoryController {
             if (blogs.length > 0) {
                 // Delete media files associated with each blog
                 for (const blog of blogs) {
-                    if (blog.medias && blog.medias.length > 0) {
-                        await this.fileService.deleteFiles(blog.medias);
+                    /** Delete blog media document */
+                    const medias = await this.blogService.findMediasByBlogId(blog._id);
+                    /** Delete media file */
+                    if (medias.length > 0) {
+                        // Extract _id array
+                        const ids = medias.map(media => media._id);
+
+                        await this.blogService.findMediasByIdsAndDeleteMany(ids);
+
+                        const fileName: string[] = medias.map((media) => path.join(process.cwd(), media.path));
+                        await this.fileService.deleteFiles(fileName);
                     }
                 }
                 // Delete blogs related to the category
