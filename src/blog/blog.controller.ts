@@ -234,7 +234,7 @@ export class BlogController {
     }
 
     /** We don't update main_media */
-    @Patch(":id")
+    @Post(":id")
     @HttpCode(200)
     @ApiBearerAuth("access-token")
     @ApiOperation({ summary: "Update blog" })
