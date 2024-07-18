@@ -15,8 +15,6 @@ import { UpdateBlogDto } from './dto/update-blog.dto';
 import { FeedbackService } from 'src/feedback/feedback.service';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 
-const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-
 import { IsIn } from 'class-validator';
 import { Blog } from './schema/blog.schema';
 
@@ -58,8 +56,22 @@ export class BlogController {
 
         const { blogs, total_count } = await this.blogService.filterAndSortBlogs(q, limit, page, random);
 
+        // Extract blog IDs
+        const blogIds = blogs.map(blog => blog._id);
+        // Fetch media documents
+        const medias = await this.blogService.findMediasByBlogIds(blogIds);
+
+        // Map media documents to their corresponding blogs
+        const blogData = blogs.map(blog => {
+            const blogMedias = medias.filter(media => media.blog_id.toString() === blog._id.toString());
+            return {
+                ...blog.toObject(),
+                medias: blogMedias.map(media => ({ _id: media._id, path: media.path }))
+            };
+        });
+
         return {
-            data: blogs,
+            data: blogData,
             total_count,
             limit,
             page
@@ -91,7 +103,7 @@ export class BlogController {
             };
         }
 
-        const  sub_category = await this.categoryService.filterByName(q, page, limit);
+        const sub_category = await this.categoryService.filterByName(q, page, limit);
         const { blogs, total_count } = await this.blogService.filterByName(q, page, limit);
 
         return {
@@ -163,28 +175,30 @@ export class BlogController {
 
             const blog = await this.blogService.createBlog(body, admin_id);
 
+            let medias_result: any;
             if (files.medias) {
                 let media_files_names = [];
 
                 for (const file of files.medias) {
-                    const newFilename = await this.fileService.generateFileName(`${file.filename}-${uniqueSuffix}-related`, file, 'uploads/blog');
+                    const uniqueSuffix = Math.floor(100000 + Math.random() * 900000);
+                    const newFilename = await this.fileService.generateFileName(`${blog._id}-${uniqueSuffix}-${file.originalname}`, file, 'uploads/blog');
+
                     media_files_names.push(`uploads/blog/${newFilename}`);
                 }
 
-                blog.medias = media_files_names;
-
-                if (+body.main_media_index !== undefined && +body.main_media_index < media_files_names.length) {
-                    blog.main_media = media_files_names[+body.main_media_index];
-                } else {
-                    blog.main_media = media_files_names[0];
-                }
+                /** Start - Save blog's media */
+                medias_result = await this.blogService.createMedias(media_files_names, blog._id);
+                /** End - Save blog's media */
             }
 
             await blog.save();
 
             return {
                 message: "Success",
-                data: blog
+                data: {
+                    ...blog.toJSON(),
+                    medias: medias_result
+                }
             };
         } catch (error) {
             throw error;
@@ -207,9 +221,14 @@ export class BlogController {
         blog.view = +blog.view + 1;
         await blog.save();
 
+        const medias = await this.blogService.findMediasByBlogId(blog._id);
+
         return {
             data: {
-                blog
+                blog: {
+                    ...blog.toJSON(),
+                    medias
+                }
             }
         };
     }
@@ -240,16 +259,7 @@ export class BlogController {
                     },
                     nullable: true,
                 },
-                mediasIndices: { type: "string", nullable: true, example: "[0,1]" },
                 medias_to_remove: { type: "string", nullable: true, example: "[0,1]" },
-                new_medias: {
-                    type: 'array',
-                    items: {
-                        type: 'string',
-                        format: 'binary',
-                    },
-                    nullable: true,
-                },
             }
         }
     })
@@ -264,23 +274,18 @@ export class BlogController {
         @Request() req: any,
     ): Promise<any> {
         const admin_id = req.user._id;
-        const { mediasIndices, medias_to_remove } = body;
+        const { medias_to_remove } = body;
         let mediasFileName = [];
-        let newMediasFileName = [];
         const uploadFolder = path.join(process.cwd(), 'uploads', 'blog');
 
         if (files.medias && files.medias.length >= 1) {
             mediasFileName = files.medias.map((file: any) => path.join(uploadFolder, file.filename));
         }
 
-        if (files.new_medias && files.new_medias.length >= 1) {
-            newMediasFileName = files.new_medias.map((file: any) => path.join(uploadFolder, file.filename));
-        }
-
         const blog = await this.blogService.findById(id);
 
         if (!blog) {
-            await this.fileService.deleteFilesIfExist(mediasFileName, newMediasFileName);
+            await this.fileService.deleteFiles(mediasFileName);
             throw new InternalServerErrorException("Blog data not found.");
         }
 
@@ -288,71 +293,37 @@ export class BlogController {
             const category = await this.categoryService.findSubCategoryById(body.category_id.toString());
 
             if (!category) {
-                await this.fileService.deleteFilesIfExist(mediasFileName, newMediasFileName);
+                await this.fileService.deleteFiles(mediasFileName);
                 throw new InternalServerErrorException("Category Not found.");
             }
         }
 
         const updatedBlog = await this.blogService.findByIdAndUpdate(id, body);
 
-        /** Start - Used "files.medias" and "mediasIndices" to update image from related images array */
-        const mediasIndicesArray = mediasIndices ? JSON.parse(mediasIndices.replace(/^"(.*)"$/, '$1')) : null;
-
-        if (files.medias && mediasIndicesArray) {
-            if (files.medias.length !== mediasIndicesArray.length) {
-                await this.fileService.deleteFilesIfExist(mediasFileName, newMediasFileName);
-                throw new InternalServerErrorException('The number of related images and indices must match.');
-            }
-
-            for (let i = 0; i < mediasIndicesArray.length; i++) {
-                const index = mediasIndicesArray[i];
-
-                if (index < 0 || index >= updatedBlog.medias.length) {
-                    await this.fileService.deleteFilesIfExist(mediasFileName, newMediasFileName);
-                    throw new InternalServerErrorException(`Invalid related image index: ${index}.`);
-                }
-
-                const newImageFile = files.medias[i];
-                const newFilename = await this.fileService.generateFileName(`${newImageFile.filename}-${uniqueSuffix}-related`, newImageFile, 'uploads/blog');
-                await this.fileService.deleteFiles([path.join(process.cwd(), updatedBlog.medias[index])]);
-
-                updatedBlog.medias[index] = `uploads/blog/${newFilename}`;
-            }
-        } else {
-            await this.fileService.deleteFilesIfExist(mediasFileName, []);
-        }
-        /** Start - Used "files.medias" and "mediasIndices" to update image from related images array */
-
         /** Start - Remove medias from medias array */
-        const mediaToRemoveArray = medias_to_remove ? JSON.parse(medias_to_remove.replace(/^"(.*)"$/, '$1')) : null;
-
-        if (medias_to_remove && mediaToRemoveArray.length > 0) {
-            const indicesToRemove = mediaToRemoveArray;
-            indicesToRemove.sort((a, b) => b - a);
-
-            for (const index of indicesToRemove) {
-                if (index < 0 || index >= updatedBlog.medias.length) {
-                    await this.fileService.deleteFilesIfExist(mediasFileName, newMediasFileName);
-                    throw new InternalServerErrorException(`Invalid related image index: ${index}.`);
-                }
-
-                await this.fileService.deleteFiles([path.join(process.cwd(), updatedBlog.medias[index])]);
-                updatedBlog.medias.splice(index, 1);
-            }
+        // Need to delete medias from uploads/blog folder
+        if (medias_to_remove) {
+            const mediaToRemoveArray = JSON.parse(medias_to_remove.replace(/'/g, '"'));
+            const medias = await this.blogService.findMediasByMediasIds(mediaToRemoveArray);
+            const mediasFilePath = medias.map((media) => path.join(process.cwd(), media.path));
+            await this.fileService.deleteFiles(mediasFilePath);
+            await this.blogService.findMediasByIdsAndDeleteMany(mediaToRemoveArray);
         }
         /** End - Remove medias from medias array */
 
         /**  Start - Process new medias (if any) */
-        if (files.new_medias) {
+        let medias_result: any;
+        if (files.medias) {
             let media_files_names = [];
 
-            for (const file of files.new_medias) {
-                const newFilename = await this.fileService.generateFileName(`${file.filename}-${uniqueSuffix}-related`, file, 'uploads/blog');
+            for (const file of files.medias) {
+                const uniqueSuffix = Math.floor(100000 + Math.random() * 900000);
+                const newFilename = await this.fileService.generateFileName(`${id}-${uniqueSuffix}-${file.originalname}`, file, 'uploads/blog');
                 media_files_names.push(`uploads/blog/${newFilename}`);
             }
 
             if (media_files_names.length > 0) {
-                updatedBlog.medias.push(...media_files_names.map(file => file));
+                medias_result = await this.blogService.createMedias(media_files_names, id);
             }
         }
         /**  End - Process new medias (if any) */
@@ -360,49 +331,10 @@ export class BlogController {
         await updatedBlog.save();
 
         return {
-            data: updatedBlog
-        };
-    }
-
-    @Patch(":id/set-main-media")
-    @HttpCode(200)
-    @ApiBearerAuth("access-token")
-    @ApiOperation({ summary: "Update blog main-media" })
-    @ApiResponse({ status: 200, description: "success" })
-    @ApiBody({
-        description: 'Update blog main-media',
-        required: true,
-        examples: {
-            example1: {
-                summary: 'Update blog main-media',
-                value: {
-                    main_media_index: '0',
-                }
+            data: {
+                ...updatedBlog.toObject(),
+                medias: medias_result
             }
-        }
-    })
-    async setMainMedia(
-        @Param("id") id: string,
-        @Body() body: { main_media_index: number }
-    ): Promise<any> {
-        const { main_media_index } = body;
-
-        const blog = await this.blogService.findById(id);
-
-        if (!blog) {
-            throw new InternalServerErrorException("Blog data not found.");
-        }
-
-        if (main_media_index < 0 || main_media_index >= blog.medias.length) {
-            throw new InternalServerErrorException("Invalid main media index.");
-        }
-
-        blog.main_media = blog.medias[main_media_index];
-        await blog.save();
-
-        return {
-            message: "Main media updated successfully",
-            data: blog
         };
     }
 
@@ -438,9 +370,14 @@ export class BlogController {
         blog.rank = rank
         await blog.save();
 
+        const medias = await this.blogService.findMediasByBlogId(blog._id);
+
         return {
             message: "Rank updated successfully",
-            data: blog
+            data: {
+                ...blog.toObject(),
+                medias
+            }
         };
     }
 
@@ -461,8 +398,14 @@ export class BlogController {
             throw new InternalServerErrorException("Blog not found.");
         }
 
-        if (blog.medias.length > 0) {
-            const fileName: string[] = blog.medias.map((file) => path.join(process.cwd(), file));
+        const medias = await this.blogService.findMediasByBlogId(blog._id);
+        if (medias.length > 0) {
+            // Extract _id array
+            const ids = medias.map(media => media._id);
+
+            await this.blogService.findMediasByIdsAndDeleteMany(ids);
+
+            const fileName: string[] = medias.map((media) => path.join(process.cwd(), media.path));
             await this.fileService.deleteFiles(fileName);
         }
 

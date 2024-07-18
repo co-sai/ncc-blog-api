@@ -1,14 +1,16 @@
-import { Model } from 'mongoose';
+import { Model, Models } from 'mongoose';
 import { Injectable, Body } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 
 import { Blog } from './schema/blog.schema';
+import { Media } from './schema/media.schema';
 import { CreateBlogDto } from './dto/create-blog.dto';
 
 @Injectable()
 export class BlogService {
     constructor(
         @InjectModel(Blog.name) private blogModel: Model<Blog>,
+        @InjectModel(Media.name) private mediaModel: Model<Media>
     ) { }
 
     async createBlog(body: CreateBlogDto, admin_id: string) {
@@ -46,6 +48,22 @@ export class BlogService {
 
     async findById(id: string): Promise<Blog> {
         return await this.blogModel.findById(id).exec();
+    }
+
+    async findMediasByBlogId(blog_id: any) {
+        return await this.mediaModel.find({ blog_id: blog_id }).select("_id path").exec();
+    }
+
+    async findMediasByBlogIds(blogIds: any) {
+        return this.mediaModel.find({ blog_id: { $in: blogIds } }).exec();
+    }
+
+    async findMediasByIdsAndDeleteMany(ids : any){
+        return this.mediaModel.deleteMany({ _id: { $in: ids } }).exec();
+    }
+
+    async findMediasByMediasIds(ids : any){
+        return this.mediaModel.find({ _id: { $in: ids } }).exec();
     }
 
     async findByIdAndUpdate(id: string, body: any) {
@@ -91,7 +109,7 @@ export class BlogService {
     async filterByName(q: string, page: number, limit: number): Promise<{ blogs: Blog[], total_count: number }> {
         const searchTerm = q.trim();
         if (!searchTerm) {
-            return { blogs : [], total_count: 0 };
+            return { blogs: [], total_count: 0 };
         }
         const blogs = await this.blogModel.find({
             title: { $regex: new RegExp(searchTerm, 'i') }
@@ -106,5 +124,11 @@ export class BlogService {
         }).countDocuments();
 
         return { blogs, total_count };
+    }
+
+    async createMedias(media_files_names: string[], blog_id: any) {
+        const mediaDocs = media_files_names.map(path => ({ path, blog_id }));
+        const medias = await this.mediaModel.insertMany(mediaDocs);
+        return medias.map(media => ({ _id: media._id, path: media.path }));
     }
 }
