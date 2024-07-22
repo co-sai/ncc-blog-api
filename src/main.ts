@@ -33,7 +33,7 @@ async function bootstrap() {
         // Allow all origins in development mode
         callback(null, true);
       } else {
-        const allowedOrigins = ['http://localhost:3000', 'http://162.0.225.227:3000'];
+        const allowedOrigins = ['http://localhost:3000', 'http://162.0.225.227:3000', 'https://blog.lucky7and1.com'];
         if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
