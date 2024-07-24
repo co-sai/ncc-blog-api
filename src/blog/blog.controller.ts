@@ -1,5 +1,5 @@
 "use strict";
-import { Controller, Get, Post, Patch, Param, Body, UploadedFiles, Request, UseGuards, UseInterceptors, InternalServerErrorException, Delete, Query, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UploadedFiles, Request, UseGuards, UseInterceptors, InternalServerErrorException, Delete, Query, HttpCode, NotFoundException } from '@nestjs/common';
 import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
 import { BlogService } from './blog.service';
@@ -215,7 +215,7 @@ export class BlogController {
     ): Promise<any> {
         const blog = await this.blogService.findById(id);
         if (!blog) {
-            throw new InternalServerErrorException("Blog data not found.");
+            throw new NotFoundException("Blog data not found.");
         }
 
         blog.view = +blog.view + 1;
